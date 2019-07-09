@@ -43,6 +43,7 @@ fn tu1() {
 
 fn tu8() {
     let mut a: u8 = 0x11;
+    verify!(!a == 0xee);
     a &= 0x10;
     verify!(a == 0x10);
     a |= 1;
@@ -53,6 +54,7 @@ fn tu8() {
 
 fn ti8() {
     let mut a: i8 = 0x11;
+    verify!(!a == -0x12);
     a &= 0x10;
     verify!(a == 0x10);
     a |= 1;

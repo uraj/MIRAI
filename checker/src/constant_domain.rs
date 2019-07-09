@@ -261,6 +261,18 @@ impl ConstantDomain {
         }
     }
 
+    /// Returns an integral constant that is "!self".
+    #[logfn_inputs(TRACE)]
+    pub fn bit_not(&self) -> Self {
+        match &self {
+            ConstantDomain::I128(val) => ConstantDomain::I128(!val),
+            ConstantDomain::U128(val) => ConstantDomain::U128(!val),
+            ConstantDomain::False => ConstantDomain::True,
+            ConstantDomain::True => ConstantDomain::False,
+            _ => ConstantDomain::Bottom,
+        }
+    }
+
     /// Returns a constant that is "self as target_type"
     #[allow(clippy::cast_lossless)]
     #[logfn_inputs(TRACE)]
@@ -539,7 +551,7 @@ impl ConstantDomain {
         .into()
     }
 
-    /// Returns a constant that is "!self".
+    /// Returns a boolean constant that is "!self".
     #[logfn_inputs(TRACE)]
     pub fn not(&self) -> Self {
         match &self {

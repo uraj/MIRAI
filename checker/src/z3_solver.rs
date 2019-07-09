@@ -194,7 +194,10 @@ impl Z3Solver {
             Expression::And { left, right } => {
                 self.general_boolean_op(left, right, z3_sys::Z3_mk_and)
             }
-            Expression::BitAnd { .. } | Expression::BitOr { .. } | Expression::BitXor { .. } => {
+            Expression::BitAnd { .. }
+            | Expression::BitOr { .. }
+            | Expression::BitXor { .. }
+            | Expression::BitNot { .. } => {
                 self.get_as_bv_z3_ast(expression, 128)
             }
             Expression::Cast {
@@ -629,8 +632,11 @@ impl Z3Solver {
             | Expression::Ne { .. }
             | Expression::Not { .. }
             | Expression::Or { .. } => self.numeric_boolean_op(expression),
-            Expression::BitAnd { .. } | Expression::BitOr { .. } | Expression::BitXor { .. } => {
-                self.numeric_bitwise_binary(expression)
+            Expression::BitAnd { .. }
+            | Expression::BitOr { .. }
+            | Expression::BitXor { .. }
+            | Expression::BitNot { .. } => {
+                self.numeric_bitwise(expression)
             }
             Expression::Cast { target_type, .. } => self.numeric_cast(expression, target_type),
             Expression::CompileTimeConstant(const_domain) => {
@@ -803,7 +809,7 @@ impl Z3Solver {
     }
 
     #[logfn_inputs(TRACE)]
-    fn numeric_bitwise_binary(&self, expression: &Expression) -> (bool, z3_sys::Z3_ast) {
+    fn numeric_bitwise(&self, expression: &Expression) -> (bool, z3_sys::Z3_ast) {
         let ast = self.get_as_bv_z3_ast(expression, 128);
         unsafe { (false, z3_sys::Z3_mk_bv2int(self.z3_context, ast, false)) }
     }
@@ -1129,6 +1135,9 @@ impl Z3Solver {
             Expression::BitXor { left, right } => {
                 self.bv_binary(num_bits, left, right, z3_sys::Z3_mk_bvxor)
             }
+            Expression::BitNot { operand } => {
+                self.bv_not(num_bits, operand)
+            }
             Expression::Cast { .. } => self.bv_cast(expression, num_bits),
             Expression::CompileTimeConstant(const_domain) => {
                 self.bv_constant(num_bits, const_domain)
@@ -1170,6 +1179,12 @@ impl Z3Solver {
         let left_ast = self.get_as_bv_z3_ast(&(**left).expression, num_bits);
         let right_ast = self.get_as_bv_z3_ast(&(**right).expression, num_bits);
         unsafe { operation(self.z3_context, left_ast, right_ast) }
+    }
+
+    #[logfn_inputs(TRACE)]
+    fn bv_not(&self, num_bits: u32, operand: &Rc<AbstractValue>) -> z3_sys::Z3_ast {
+        let operand_ast = self.get_as_bv_z3_ast(&(**operand).expression, num_bits);
+        unsafe { z3_sys::Z3_mk_bvnot(self.z3_context, operand_ast) }
     }
 
     #[logfn_inputs(TRACE)]

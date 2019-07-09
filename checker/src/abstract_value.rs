@@ -198,6 +198,7 @@ pub trait AbstractValueTrait: Sized {
     fn bit_and(&self, other: Self) -> Self;
     fn bit_or(&self, other: Self) -> Self;
     fn bit_xor(&self, other: Self) -> Self;
+    fn bit_not(&self) -> Self;
     fn cast(&self, target_type: ExpressionType) -> Self;
     fn conditional_expression(&self, consequent: Self, alternate: Self) -> Self;
     fn divide(&self, other: Self) -> Self;
@@ -435,6 +436,18 @@ impl AbstractValueTrait for Rc<AbstractValue> {
             left,
             right,
         })
+    }
+
+    /// Returns an element that is "!self", when self is of integral types.
+    #[logfn_inputs(TRACE)]
+    fn bit_not(&self) -> Rc<AbstractValue> {
+        if let Expression::CompileTimeConstant(v) = &self.expression {
+            let result = v.bit_not();
+            if result != ConstantDomain::Bottom {
+                return Rc::new(result.into());
+            }
+        }
+        AbstractValue::make_unary(self.clone(), |operand| Expression::BitNot { operand })
     }
 
     /// Returns an element that is "self as target_type".
@@ -873,7 +886,7 @@ impl AbstractValueTrait for Rc<AbstractValue> {
         })
     }
 
-    /// Returns an element that is "!self".
+    /// Returns an element that is "!self", when self is boolean.
     #[logfn_inputs(TRACE)]
     fn logical_not(&self) -> Rc<AbstractValue> {
         if let Expression::CompileTimeConstant(v1) = &self.expression {
@@ -1354,6 +1367,9 @@ impl AbstractValueTrait for Rc<AbstractValue> {
             Expression::BitXor { left, right } => left
                 .refine_paths(environment)
                 .bit_xor(right.refine_paths(environment)),
+            Expression::BitNot { operand } => operand
+                .refine_paths(environment)
+                .bit_not(),
             Expression::Cast {
                 operand,
                 target_type,
@@ -1536,6 +1552,9 @@ impl AbstractValueTrait for Rc<AbstractValue> {
             Expression::BitXor { left, right } => left
                 .refine_parameters(arguments, fresh)
                 .bit_xor(right.refine_parameters(arguments, fresh)),
+            Expression::BitNot { operand } => operand
+                .refine_parameters(arguments, fresh)
+                .bit_not(),
             Expression::Cast {
                 operand,
                 target_type,
@@ -1726,6 +1745,9 @@ impl AbstractValueTrait for Rc<AbstractValue> {
             Expression::BitXor { left, right } => left
                 .refine_with(path_condition, depth + 1)
                 .bit_xor(right.refine_with(path_condition, depth + 1)),
+            Expression::BitNot { operand } => operand
+                .refine_with(path_condition, depth + 1)
+                .bit_not(),
             Expression::Cast {
                 operand,
                 target_type,

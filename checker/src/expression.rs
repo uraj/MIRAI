@@ -81,6 +81,9 @@ pub enum Expression {
         right: Rc<AbstractValue>,
     },
 
+    /// An expression that is the bitwise negation of operand. !
+    BitNot { operand: Rc<AbstractValue> },
+
     /// An expression that is the operand cast to the target_type. as
     Cast {
         operand: Rc<AbstractValue>,
@@ -335,6 +338,11 @@ impl Debug for Expression {
             Expression::BitXor { left, right } => {
                 f.write_fmt(format_args!("({:?}) ^ ({:?})", left, right))
             }
+            Expression::BitNot { operand } => {
+                // Use ~ to denote bitwise negation such that it is easier to
+                // distinguish it from logical not expressions
+                f.write_fmt(format_args!("~({:?})", operand))
+            }
             Expression::Cast {
                 operand,
                 target_type,
@@ -436,6 +444,7 @@ impl Expression {
             Expression::BitAnd { left, .. } => left.expression.infer_type(),
             Expression::BitOr { left, .. } => left.expression.infer_type(),
             Expression::BitXor { left, .. } => left.expression.infer_type(),
+            Expression::BitNot { operand } => operand.expression.infer_type(),
             Expression::Cast { target_type, .. } => target_type.clone(),
             Expression::CompileTimeConstant(c) => c.into(),
             Expression::ConditionalExpression { consequent, .. } => {
@@ -533,7 +542,9 @@ impl Expression {
                 left.expression.record_heap_addresses(result);
                 right.expression.record_heap_addresses(result);
             }
-            Expression::Neg { operand } | Expression::Not { operand } => {
+            Expression::Neg { operand }
+            | Expression::BitNot { operand }
+            | Expression::Not { operand } => {
                 operand.expression.record_heap_addresses(result);
             }
             Expression::Reference(path) => path.record_heap_addresses(result),

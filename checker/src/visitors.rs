@@ -2365,7 +2365,12 @@ impl<'a, 'b: 'a, 'tcx: 'b, E> MirVisitor<'a, 'b, 'tcx, E> {
         let operand = self.visit_operand(operand);
         let result = match un_op {
             mir::UnOp::Neg => operand.negate(),
-            mir::UnOp::Not => operand.logical_not(),
+            mir::UnOp::Not => {
+                match operand.expression.infer_type() {
+                    ExpressionType::Bool => operand.logical_not(),
+                    _ => operand.bit_not(),
+                }
+            }
         };
         self.current_environment.update_value_at(path, result);
     }
